@@ -1,0 +1,60 @@
+{
+  "blueprints": [
+    {
+      "id": "c9ac4a53-75f9-4484-8236-ee1f56e65072",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T16:11:05.047Z",
+      "status": "complete",
+      "totalDuration": 767
+    },
+    {
+      "id": "751c4004-0ee9-4fd8-9f8b-1411a97bd0d2",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T16:11:04.266Z",
+      "status": "complete",
+      "totalDuration": 794
+    },
+    {
+      "id": "0822bdfc-f2e5-4dfe-9e39-b814c76cc57b",
+      "idea": "make an prototype of ticket app",
+      "createdAt": "2026-06-25T11:18:11.184Z",
+      "status": "complete",
+      "totalDuration": 222257
+    },
+    {
+      "id": "a00dd14b-0bf9-4071-9541-213947651a8c",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T11:05:01.747Z",
+      "status": "complete",
+      "totalDuration": 784
+    },
+    {
+      "id": "a64fa95f-6ab5-4290-ac78-2e4a58d8df01",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T11:05:00.946Z",
+      "status": "complete",
+      "totalDuration": 784
+    },
+    {
+      "id": "2f654fcf-9039-45ab-b033-fc06eda52dcd",
+      "idea": "Build an CampusConnect platform",
+      "createdAt": "2026-06-25T10:40:37.123Z",
+      "status": "complete",
+      "totalDuration": 145469
+    },
+    {
+      "id": "aa394a1b-984e-433c-8647-596fcd37113f",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T10:22:09.796Z",
+      "status": "complete",
+      "totalDuration": 783
+    },
+    {
+      "id": "f9ab7822-9d3f-4e9f-82a7-18acfcd029af",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-25T10:19:10.971Z",
+      "status": "complete",
+      "totalDuration": 178048
+    }
+  ]
+}

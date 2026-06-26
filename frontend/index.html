@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArchitectAI — Software Blueprint Generator</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="icon.png">
+  <meta property="og:image" content="icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">ArchitectAI</span>
+        <span class="logo-badge">BETA</span>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" data-view="builder" onclick="switchView('builder')">Builder</button>
+        <button class="nav-btn" data-view="history" onclick="switchView('history')">Blueprints</button>
+        <button class="nav-btn" data-view="devpanel" onclick="switchView('devpanel')">🛠 Dev Panel</button>
+        <button class="nav-btn" data-view="logs" onclick="switchView('logs')">Logs</button>
+      </nav>
+      <div class="header-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Checking...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- BUILDER VIEW -->
+  <main id="view-builder" class="view active">
+
+    <!-- INPUT SECTION -->
+    <section class="input-section">
+      <div class="input-inner">
+        <div class="input-label">DESCRIBE YOUR SOFTWARE IDEA</div>
+        <div class="input-row">
+          <textarea
+            id="ideaInput"
+            class="idea-input"
+            placeholder="e.g. Build an AI-powered internship platform that connects students with companies, uses ML to match skills to job requirements, and provides automated resume screening..."
+            rows="4"
+          ></textarea>
+          <button class="generate-btn" id="generateBtn" onclick="generateBlueprint()">
+            <span class="btn-icon">⬡</span>
+            <span class="btn-text">Generate Blueprint</span>
+          </button>
+        </div>
+        <div class="input-examples">
+          <span class="examples-label">Try:</span>
+          <button class="example-chip" onclick="setExample('An AI-powered internship platform for students that matches them with companies using ML')">Internship Platform</button>
+          <button class="example-chip" onclick="setExample('A SaaS tool for small businesses to automate customer support using AI chatbots and ticketing')">AI Support SaaS</button>
+          <button class="example-chip" onclick="setExample('A real-time collaborative code review platform with AI suggestions and automated testing integration')">Dev Collaboration</button>
+          <button class="example-chip" onclick="setExample('An e-learning platform that personalizes course paths using AI based on student performance and goals')">EdTech Platform</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE PROGRESS -->
+    <section class="pipeline-section" id="pipelineSection" style="display:none">
+      <div class="pipeline-inner">
+        <div class="pipeline-header">
+          <div class="pipeline-title">AI Pipeline Running</div>
+          <div class="pipeline-timer" id="pipelineTimer">0s</div>
+        </div>
+        <div class="pipeline-stages">
+          <div class="pipeline-stage" id="stage-ideaAnalysis">
+            <div class="stage-icon">01</div>
+            <div class="stage-info">
+              <div class="stage-name">Idea Analyzer</div>
+              <div class="stage-desc">Extracting industry, users, business model</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-requirements">
+            <div class="stage-icon">02</div>
+            <div class="stage-info">
+              <div class="stage-name">Requirements Generator</div>
+              <div class="stage-desc">Functional, non-functional, user stories</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-features">
+            <div class="stage-icon">03</div>
+            <div class="stage-info">
+              <div class="stage-name">Feature Generator</div>
+              <div class="stage-desc">Core, admin, AI, and premium features</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-database">
+            <div class="stage-icon">04</div>
+            <div class="stage-info">
+              <div class="stage-name">Database Architect</div>
+              <div class="stage-desc">Collections, schemas, indexes, relationships</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-api">
+            <div class="stage-icon">05</div>
+            <div class="stage-info">
+              <div class="stage-name">API Architect</div>
+              <div class="stage-desc">REST endpoints, auth, request/response schemas</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-architecture">
+            <div class="stage-icon">06</div>
+            <div class="stage-info">
+              <div class="stage-name">System Architect</div>
+              <div class="stage-desc">Frontend, backend, AI, deployment architecture</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+          <div class="pipeline-stage" id="stage-roadmap">
+            <div class="stage-icon">07</div>
+            <div class="stage-info">
+              <div class="stage-name">Roadmap Generator</div>
+              <div class="stage-desc">Phases, milestones, testing, launch plan</div>
+            </div>
+            <div class="stage-status idle">Waiting</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OUTPUT SECTION -->
+    <section class="output-section" id="outputSection" style="display:none">
+      
+      <div class="output-layout-grid">
+        
+        <!-- SIDEBAR (LEFT) -->
+        <aside class="output-sidebar">
+          
+          <!-- LIVE PIPELINE PROGRESS TRACKER -->
+          <div class="sidebar-block">
+            <div class="sidebar-block-title">Generation Stages</div>
+            <div class="pipeline-sidebar-stages">
+              <div class="sidebar-stage" id="sidebar-stage-ideaAnalysis">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">Idea Analysis</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-requirements">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">Requirements</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-features">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">Features</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-database">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">Database Schema</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-api">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">API Endpoints</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-architecture">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">System Architecture</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+              <div class="sidebar-stage" id="sidebar-stage-roadmap">
+                <span class="stage-dot-indicator"></span>
+                <span class="stage-name-text">Development Roadmap</span>
+                <span class="stage-status-text">idle</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUICK METRICS -->
+          <div class="sidebar-block">
+            <div class="sidebar-block-title">Project Summary</div>
+            <div class="dashboard-container-vertical" id="executiveDashboard"></div>
+          </div>
+          
+          <!-- CHATBOT WIDGET -->
+          <div class="sidebar-block chat-block">
+            <div class="sidebar-block-title">💬 AI Architect Chat</div>
+            <div class="chat-widget" id="chatbotWidget">
+              <div class="chat-messages" id="chatMessages">
+                <div class="chat-bubble system">
+                  Hello! I'm your ArchitectAI Assistant. Ask me anything about this generated blueprint.
+                </div>
+              </div>
+              <div class="chat-input-area">
+                <textarea id="chatInput" placeholder="Ask a question..." rows="1"></textarea>
+                <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- MAIN PANEL (RIGHT) -->
+        <div class="output-main-panel">
+          
+          <div class="output-header">
+            <div class="output-title-area">
+              <h2 class="output-title" id="outputTitle">Software Blueprint</h2>
+              <div class="output-meta" id="outputMeta"></div>
+            </div>
+            <div class="output-actions">
+              <button class="action-btn" onclick="saveCurrentBlueprint()">💾 Save</button>
+              <div class="export-dropdown" id="exportDropdown">
+                <button class="action-btn dropdown-trigger" onclick="toggleExportMenu()">⬇ Export ▾</button>
+                <div class="dropdown-menu" id="exportMenu" style="display:none">
+                  <button class="dropdown-item" onclick="triggerExport('json')">📄 JSON</button>
+                  <button class="dropdown-item" onclick="triggerExport('markdown')">📝 Markdown</button>
+                  <button class="dropdown-item" onclick="triggerExport('pdf')">📕 PDF Report</button>
+                  <button class="dropdown-item" onclick="triggerExport('docx')">📘 Word DOCX</button>
+                </div>
+              </div>
+              <button class="action-btn secondary" onclick="resetBuilder()">↺ New Blueprint</button>
+            </div>
+          </div>
+
+          <!-- TABS -->
+          <div class="tabs">
+            <button class="tab active" data-tab="analysis" onclick="switchTab('analysis')">Analysis</button>
+            <button class="tab" data-tab="requirements" onclick="switchTab('requirements')">Requirements</button>
+            <button class="tab" data-tab="features" onclick="switchTab('features')">Features</button>
+            <button class="tab" data-tab="database" onclick="switchTab('database')">Database</button>
+            <button class="tab" data-tab="api" onclick="switchTab('api')">API</button>
+            <button class="tab" data-tab="architecture" onclick="switchTab('architecture')">Architecture</button>
+            <button class="tab" data-tab="roadmap" onclick="switchTab('roadmap')">Roadmap</button>
+            <button class="tab" data-tab="quality" onclick="switchTab('quality')">🎯 Quality Review</button>
+            <button class="tab" data-tab="export" onclick="switchTab('export')">📦 Export Center</button>
+          </div>
+          
+          <!-- TAB CONTENT -->
+          <div class="tab-panels">
+
+            <!-- ANALYSIS PANEL -->
+            <div class="tab-panel active" id="panel-analysis">
+              <div class="skeleton-loader-container" id="skeleton-analysis">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="analysis-content" style="display:none"></div>
+            </div>
+
+            <!-- REQUIREMENTS PANEL -->
+            <div class="tab-panel" id="panel-requirements">
+              <div class="skeleton-loader-container" id="skeleton-requirements">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="requirements-content-wrapper" style="display:none">
+                <div class="panel-toggles">
+                  <button class="toggle-btn active" id="btn-requirements-grid" onclick="toggleView('requirements', 'grid')">📋 Requirements & Stories</button>
+                  <button class="toggle-btn" id="btn-requirements-visual" onclick="toggleView('requirements', 'visual')">📊 User Flow Diagram</button>
+                </div>
+                <div id="view-requirements-grid">
+                  <div id="requirements-content"></div>
+                </div>
+                <div id="view-requirements-visual" style="display:none">
+                  <div class="mermaid-container">
+                    <div id="mermaid-requirements" class="mermaid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- FEATURES PANEL -->
+            <div class="tab-panel" id="panel-features">
+              <div class="skeleton-loader-container" id="skeleton-features">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="features-content" style="display:none"></div>
+            </div>
+
+            <!-- DATABASE PANEL -->
+            <div class="tab-panel" id="panel-database">
+              <div class="skeleton-loader-container" id="skeleton-database">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="database-content-wrapper" style="display:none">
+                <div class="panel-toggles">
+                  <button class="toggle-btn active" id="btn-database-grid" onclick="toggleView('database', 'grid')">📋 Collections Grid</button>
+                  <button class="toggle-btn" id="btn-database-visual" onclick="toggleView('database', 'visual')">📊 ER Diagram</button>
+                </div>
+                <div id="view-database-grid">
+                  <div id="database-content"></div>
+                </div>
+                <div id="view-database-visual" style="display:none">
+                  <div class="mermaid-container">
+                    <div id="mermaid-database" class="mermaid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- API PANEL -->
+            <div class="tab-panel" id="panel-api">
+              <div class="skeleton-loader-container" id="skeleton-api">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="api-content" style="display:none"></div>
+            </div>
+
+            <!-- ARCHITECTURE PANEL -->
+            <div class="tab-panel" id="panel-architecture">
+              <div class="skeleton-loader-container" id="skeleton-architecture">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="architecture-content-wrapper" style="display:none">
+                <div class="panel-toggles">
+                  <button class="toggle-btn active" id="btn-architecture-grid" onclick="toggleView('architecture', 'grid')">📝 Architecture Details</button>
+                  <button class="toggle-btn" id="btn-architecture-visual" onclick="toggleView('architecture', 'visual')">📊 Flowchart Diagram</button>
+                </div>
+                <div id="view-architecture-grid">
+                  <div id="architecture-content"></div>
+                </div>
+                <div id="view-architecture-visual" style="display:none">
+                  <div class="mermaid-container">
+                    <div id="mermaid-architecture" class="mermaid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROADMAP PANEL -->
+            <div class="tab-panel" id="panel-roadmap">
+              <div class="skeleton-loader-container" id="skeleton-roadmap">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="roadmap-content-wrapper" style="display:none">
+                <div class="panel-toggles">
+                  <button class="toggle-btn active" id="btn-roadmap-grid" onclick="toggleView('roadmap', 'grid')">📋 Roadmap Grid</button>
+                  <button class="toggle-btn" id="btn-roadmap-visual" onclick="toggleView('roadmap', 'visual')">📊 Visual Timeline</button>
+                </div>
+                <div id="view-roadmap-grid">
+                  <div id="roadmap-content"></div>
+                </div>
+                <div id="view-roadmap-visual" style="display:none">
+                  <div class="mermaid-container">
+                    <div id="mermaid-roadmap" class="mermaid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- QUALITY REVIEW PANEL -->
+            <div class="tab-panel" id="panel-quality">
+              <div class="skeleton-loader-container" id="skeleton-quality">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="quality-content" style="display:none"></div>
+            </div>
+
+            <!-- EXPORT PANEL -->
+            <div class="tab-panel" id="panel-export">
+              <div class="skeleton-loader-container" id="skeleton-export">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-body">
+                  <div class="skeleton-row"></div>
+                  <div class="skeleton-row short"></div>
+                  <div class="skeleton-row medium"></div>
+                </div>
+              </div>
+              <div id="export-content" style="display:none"></div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- HISTORY VIEW -->
+  <main id="view-history" class="view" style="display:none">
+    <div class="view-inner">
+      <div class="view-title">
+        <h2>Saved Blueprints</h2>
+        <p>Your generated software blueprints</p>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="empty-state">No blueprints yet. Generate your first one!</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- DEV PANEL VIEW -->
+  <main id="view-devpanel" class="view" style="display:none">
+    <div class="view-inner">
+      <div class="view-title">
+        <h2>🛠 Developer Panel</h2>
+        <p>Token analytics, generation metrics, and AI quality review for the last blueprint</p>
+      </div>
+      <div id="devpanelContent">
+        <div class="empty-state">Generate a blueprint first to see developer metrics.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- LOGS VIEW -->
+  <main id="view-logs" class="view" style="display:none">
+    <div class="view-inner">
+      <div class="view-title">
+        <h2>Generation Logs</h2>
+        <button class="action-btn secondary" onclick="clearLogs()">Clear</button>
+      </div>
+      <div id="logsContainer" class="logs-container">
+        <div class="empty-state">No logs yet.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
