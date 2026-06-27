@@ -1,8 +1,3 @@
-/**
- * GeminiService — centralized Gemini 2.5-Flash caller.
- * Tracks: tokens, cost, duration, retry count, model, prompt version.
- */
-
 const { GoogleGenAI } = require('@google/genai');
 const { executeWithRetry } = require('./retryManager');
 const { parseJSON, validateSchema } = require('./jsonValidator');
@@ -15,7 +10,7 @@ const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 const PRICE_INPUT  = 0.075;   // $0.075 / 1M input
 const PRICE_OUTPUT = 0.300;   // $0.300 / 1M output
 
-const ai = new GoogleGenAI({});
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ── Raw call ─────────────────────────────────────────────────────────────────
 async function callGeminiRaw(prompt, stageName) {

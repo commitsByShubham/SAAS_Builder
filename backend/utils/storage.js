@@ -1,7 +1,11 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const BLUEPRINTS_DIR = path.join(__dirname, '../exports');
+const isVercel = process.env.VERCEL === '1';
+const BLUEPRINTS_DIR = isVercel
+  ? path.join('/tmp', 'exports')
+  : path.join(__dirname, '../exports');
+
 const INDEX_FILE = path.join(BLUEPRINTS_DIR, 'index.json');
 
 async function ensureDir() {

@@ -13,7 +13,10 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, Tab
 const { generateMarkdownDoc } = require('./documentationGenerator');
 const { generateAllDiagrams } = require('./diagramGenerator');
 
-const EXPORTS_DIR = path.join(__dirname, '..', 'exports');
+const isVercel = process.env.VERCEL === '1';
+const EXPORTS_DIR = isVercel
+  ? path.join('/tmp', 'exports')
+  : path.join(__dirname, '..', 'exports');
 if (!fs.existsSync(EXPORTS_DIR)) fs.mkdirSync(EXPORTS_DIR, { recursive: true });
 
 // ── Filename helpers ──────────────────────────────────────────────────────────
