@@ -4,6 +4,7 @@ const { parseJSON, validateSchema } = require('./jsonValidator');
 const logger = require('../utils/logger');
 
 const MODEL = 'gemini-2.5-flash';
+const CHAT_MODEL = 'gemini-2.0-flash';
 const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 
 // Gemini 2.5 Flash pricing (per 1M tokens)
@@ -64,7 +65,7 @@ async function callAI(prompt, stageName, schema = null) {
 
 async function callAITextRaw(prompt, systemInstruction) {
   const response = await ai.models.generateContent({
-    model: MODEL,
+    model: CHAT_MODEL,
     config: {
       systemInstruction: systemInstruction || 'You are an AI Software Architect.',
     },
