@@ -1,17 +1,19 @@
 {
-  "name": "saas-builder",
-  "version": "1.0.0",
-  "description": "AI SaaS Blueprint Generator",
-  "main": "backend/server.js",
-  "scripts": {
-    "start": "node backend/server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2"
-  },
-  "engines": {
-    "node": "18.x"
-  }
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "public/$1"
+    }
+  ]
 }
