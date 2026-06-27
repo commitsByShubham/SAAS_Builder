@@ -67,19 +67,32 @@ async function callAI(prompt, stageName, schema = null) {
   }
 }
 
+async function callAITextRaw(prompt, systemInstruction) {
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    config: {
+      systemInstruction: systemInstruction || 'You are an AI Software Architect.',
+    },
+    contents: prompt,
+  });
+  return response.text;
+}
+
 async function callAIText(prompt, systemInstruction = '') {
   try {
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      config: {
-        systemInstruction: systemInstruction || 'You are an AI Software Architect.',
-      },
-      contents: prompt,
-    });
-    return response.text;
+    const { result } = await executeWithRetry(callAITextRaw, [prompt, systemInstruction], 3, 3000);
+    return result;
   } catch (err) {
-    logger.log(`[GeminiService] Text call failed: ${err.message}`, 'error');
-    throw err;
+    let msg = err.message;
+    try {
+      const parsed = JSON.parse(msg);
+      if (parsed.error && parsed.error.message) {
+        msg = parsed.error.message;
+      }
+    } catch (_) {}
+    
+    logger.log(`[GeminiService] Text call failed: ${msg}`, 'error');
+    throw new Error(msg);
   }
 }
 

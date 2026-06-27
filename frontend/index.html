@@ -25,11 +25,11 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <div class="logo">
+      <button class="logo" onclick="goHome()" title="Return to Home">
         <span class="logo-icon">⬡</span>
         <span class="logo-text">ArchitectAI</span>
         <span class="logo-badge">BETA</span>
-      </div>
+      </button>
       <nav class="header-nav">
         <button class="nav-btn active" data-view="builder" onclick="switchView('builder')">Builder</button>
         <button class="nav-btn" data-view="history" onclick="switchView('history')">Blueprints</button>
@@ -71,6 +71,25 @@
         </div>
       </div>
     </section>
+
+    <!-- FEATURED BLUEPRINTS GALLERY -->
+    <section class="gallery-section" id="gallerySection">
+      <div class="gallery-inner">
+        <div class="gallery-grid" id="featuredGalleryGrid">
+          <!-- Rendered dynamically via script.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SCROLL DOWN PROMPT (shown when a blueprint is loaded, hides gallery) -->
+    <div class="scroll-down-prompt" id="scrollDownPrompt" style="display:none">
+      <button class="scroll-down-btn" onclick="scrollToBlueprint()">
+        <span class="scroll-down-icon">↓</span>
+        <span class="scroll-down-text">Scroll to Blueprint</span>
+        <span class="scroll-down-pulse"></span>
+      </button>
+    </div>
+
 
     <!-- PIPELINE PROGRESS -->
     <section class="pipeline-section" id="pipelineSection" style="display:none">
@@ -139,6 +158,13 @@
         </div>
       </div>
     </section>
+
+    <!-- STATS BANNER -->
+    <div class="stats-banner" id="statsBanner">
+      <div class="stats-banner-inner" id="statsBannerInner">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
 
     <!-- OUTPUT SECTION -->
     <section class="output-section" id="outputSection" style="display:none">
@@ -286,6 +312,7 @@
                 </div>
                 <div id="view-requirements-visual" style="display:none">
                   <div class="mermaid-container">
+                    <button class="diagram-toolbar-btn" onclick="openDiagramFullscreen('requirements')">🔍 Fullscreen</button>
                     <div id="mermaid-requirements" class="mermaid"></div>
                   </div>
                 </div>
@@ -325,6 +352,7 @@
                 </div>
                 <div id="view-database-visual" style="display:none">
                   <div class="mermaid-container">
+                    <button class="diagram-toolbar-btn" onclick="openDiagramFullscreen('database')">🔍 Fullscreen</button>
                     <div id="mermaid-database" class="mermaid"></div>
                   </div>
                 </div>
@@ -364,6 +392,7 @@
                 </div>
                 <div id="view-architecture-visual" style="display:none">
                   <div class="mermaid-container">
+                    <button class="diagram-toolbar-btn" onclick="openDiagramFullscreen('architecture')">🔍 Fullscreen</button>
                     <div id="mermaid-architecture" class="mermaid"></div>
                   </div>
                 </div>
@@ -390,6 +419,7 @@
                 </div>
                 <div id="view-roadmap-visual" style="display:none">
                   <div class="mermaid-container">
+                    <button class="diagram-toolbar-btn" onclick="openDiagramFullscreen('roadmap')">🔍 Fullscreen</button>
                     <div id="mermaid-roadmap" class="mermaid"></div>
                   </div>
                 </div>
@@ -470,6 +500,120 @@
       </div>
     </div>
   </main>
+
+  <!-- FLOATING CHAT LAUNCHER (always visible, bottom-right) -->
+  <div class="chat-launcher" id="chatLauncher">
+    <!-- Greeting bubble -->
+    <div class="chat-greeting-bubble" id="chatGreetingBubble">
+      <span class="chat-greeting-text">Hey! May I help you? 👋</span>
+      <button class="chat-greeting-dismiss" onclick="dismissChatGreeting(event)" title="Dismiss">✕</button>
+    </div>
+    <!-- FAB button -->
+    <button class="chat-fab-btn" id="chatFab" onclick="toggleFloatingChat()" title="AI Architect Chat">
+      <span class="chat-fab-avatar">⬡</span>
+      <span class="chat-fab-label">AI Chat</span>
+    </button>
+  </div>
+
+  <!-- FLOATING CHAT PANEL -->
+  <div class="floating-chat-panel" id="floatingChatPanel">
+    <div class="floating-chat-header">
+      <div class="floating-chat-title">
+        <span class="floating-chat-title-icon">⬡</span>
+        AI Architect Chat
+      </div>
+      <button class="floating-chat-close" onclick="toggleFloatingChat()">✕</button>
+    </div>
+    <div class="floating-chat-messages" id="floatingChatMessages">
+      <div class="chat-bubble system">Hello! I'm your ArchitectAI assistant. Ask me anything about the generated blueprint.</div>
+    </div>
+    <div class="chat-suggestions" id="floatingChatSuggestions">
+      <button class="chat-suggestion-chip" onclick="setFloatingChatInput('What tech stack is recommended?')">Tech Stack?</button>
+      <button class="chat-suggestion-chip" onclick="setFloatingChatInput('How long will this take to build?')">Timeline?</button>
+      <button class="chat-suggestion-chip" onclick="setFloatingChatInput('What are the biggest risks?')">Risks?</button>
+    </div>
+    <div class="floating-chat-footer">
+      <textarea class="floating-chat-input" id="floatingChatInput" placeholder="Ask about this blueprint..." rows="1"></textarea>
+      <button class="floating-chat-send" id="floatingChatSend" onclick="sendFloatingChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE CODE PLAYGROUND DRAWER -->
+  <div id="codeViewerDrawer" class="drawer">
+    <div class="drawer-overlay" onclick="closeCodeViewer()"></div>
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <div class="drawer-header-title">
+          <span class="drawer-icon">🖳</span>
+          <h3 id="codeViewerTitle">Interactive Code Playground</h3>
+        </div>
+        <div class="drawer-actions-row">
+          <button class="action-btn secondary" id="copyCodeBtn" onclick="copyViewerCode()">📋 Copy Code</button>
+          <button class="action-btn primary" id="downloadCodeBtn" onclick="downloadViewerCode()">⬇ Download</button>
+          <button class="close-drawer-btn" onclick="closeCodeViewer()">✕</button>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-sidebar">
+          <div class="sidebar-label">Generated Files</div>
+          <div class="file-tree" id="codeViewerFilesList">
+            <!-- Tabs for files will be dynamically rendered -->
+          </div>
+        </div>
+        <div class="code-editor-pane">
+          <div class="editor-tabs-bar">
+            <span class="editor-filename" id="currentEditorFilename">schema.prisma</span>
+          </div>
+          <div class="editor-viewport">
+            <pre class="line-numbers" id="codeViewerLineNumbers"></pre>
+            <pre class="code-content"><code id="codeViewerCodeBlock"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULLSCREEN DIAGRAM VIEW MODAL -->
+  <div id="diagramModal" class="modal">
+    <div class="modal-overlay" onclick="closeDiagramModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="diagramModalTitle">Diagram Fullscreen View</h3>
+        <div class="modal-controls">
+          <button class="control-btn" onclick="zoomDiagram(1.2)" title="Zoom In">➕</button>
+          <button class="control-btn" onclick="zoomDiagram(0.8)" title="Zoom Out">➖</button>
+          <button class="control-btn" onclick="resetDiagramZoom()" title="Reset Zoom">🔄</button>
+          <button class="control-btn" onclick="copyMermaidSourceFromModal()" title="Copy Source">📋 Copy Code</button>
+          <button class="control-btn close-modal-btn" onclick="closeDiagramModal()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-zoom-container" id="modalZoomContainer">
+          <div id="modalMermaidRender" class="mermaid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV BAR -->
+  <nav class="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" id="mobile-nav-builder" onclick="switchView('builder')">
+      <span class="mobile-nav-icon">⬡</span>
+      <span class="mobile-nav-text">Builder</span>
+    </button>
+    <button class="mobile-nav-btn" id="mobile-nav-history" onclick="switchView('history')">
+      <span class="mobile-nav-icon">📂</span>
+      <span class="mobile-nav-text">Blueprints</span>
+    </button>
+    <button class="mobile-nav-btn" id="mobile-nav-devpanel" onclick="switchView('devpanel')">
+      <span class="mobile-nav-icon">🛠</span>
+      <span class="mobile-nav-text">Telemetry</span>
+    </button>
+    <button class="mobile-nav-btn" id="mobile-nav-logs" onclick="switchView('logs')">
+      <span class="mobile-nav-icon">📋</span>
+      <span class="mobile-nav-text">Logs</span>
+    </button>
+  </nav>
 
   <!-- TOAST -->
   <div id="toast" class="toast"></div>

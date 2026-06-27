@@ -1,11 +1,11 @@
 {
   "blueprints": [
     {
-      "id": "c9ac4a53-75f9-4484-8236-ee1f56e65072",
-      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
-      "createdAt": "2026-06-25T16:11:05.047Z",
+      "id": "b8365ba2-8dcd-4402-a674-25c2d1c31e71",
+      "idea": "AI SaaS Platform: Multi-tenant AI tool with usage billing, model routing, and team workspaces. Stack: Next.js, OpenAI, Stripe, PostgreSQL",
+      "createdAt": "2026-06-27T01:55:07.693Z",
       "status": "complete",
-      "totalDuration": 767
+      "totalDuration": 120926
     },
     {
       "id": "751c4004-0ee9-4fd8-9f8b-1411a97bd0d2",

@@ -149,8 +149,57 @@ router.get('/:id/diagrams', async (req, res) => {
   }
 });
 
+// ── Rate Limiter for Chat (3 per day per IP) ──────────────────────────────────
+const chatLimits = new Map();
+
+function chatRateLimiter(req, res, next) {
+  const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  let record = chatLimits.get(ip);
+  if (!record) {
+    record = { count: 0, firstRequest: now };
+    chatLimits.set(ip, record);
+  }
+
+  // Reset limit after 24 hours
+  if (now - record.firstRequest > ONE_DAY) {
+    record.count = 0;
+    record.firstRequest = now;
+  }
+
+  if (record.count >= 3) {
+    return res.status(429).json({ error: 'You have reached your limit of 3 AI chats per day. Please try again tomorrow!' });
+  }
+
+  record.count += 1;
+  next();
+}
+
+// ── General Chat (No Blueprint Context) ───────────────────────────────────────────
+router.post('/general/chat', chatRateLimiter, async (req, res) => {
+  const { message } = req.body;
+  if (!message || message.trim() === '') {
+    return res.status(400).json({ error: 'Message cannot be empty.' });
+  }
+
+  try {
+    const systemInstruction = 
+      "You are ArchitectAI, an expert Principal Software Architect assistant. " +
+      "The user is asking questions about software architecture, technology selection, software design patterns, SAAS development, database schemas, or development roadmap planning. " +
+      "Provide constructive, precise architectural advice, answer questions, and guide them in planning their ideas.";
+
+    const responseText = await callAIText(message, systemInstruction);
+    res.json({ response: responseText });
+  } catch (error) {
+    logger.log(`General Chat failed: ${error.message}`, 'error');
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Chat with Blueprint ────────────────────────────────────────────────────────
-router.post('/:id/chat', async (req, res) => {
+router.post('/:id/chat', chatRateLimiter, async (req, res) => {
   const { message } = req.body;
   if (!message || message.trim() === '') {
     return res.status(400).json({ error: 'Message cannot be empty.' });

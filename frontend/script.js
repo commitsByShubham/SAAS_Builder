@@ -17,6 +17,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   checkHealth();
   loadHistory();
+  loadGallery();
 
   const chatInput = document.getElementById('chatInput');
   if (chatInput) {
@@ -93,6 +94,8 @@ async function generateBlueprint() {
   // Show output section immediately to display skeletons & sidebar progress
   document.getElementById('pipelineSection').style.display = 'none';
   document.getElementById('outputSection').style.display = 'block';
+  document.getElementById('gallerySection').style.display = 'none';
+  document.getElementById('scrollDownPrompt').style.display = 'none';
   
   // Clear chat logs for new run
   const chatMessages = document.getElementById('chatMessages');
@@ -261,6 +264,8 @@ async function loadAndRenderBlueprint(id) {
 
     document.getElementById('pipelineSection').style.display = 'none';
     document.getElementById('outputSection').style.display   = 'block';
+    document.getElementById('gallerySection').style.display   = 'none';
+    document.getElementById('scrollDownPrompt').style.display = 'none';
 
     switchTab('analysis');
     showToast('Blueprint loaded successfully!', 'success');
@@ -1061,6 +1066,8 @@ function resetPipelineStages() {
 function resetBuilder() {
   document.getElementById('outputSection').style.display = 'none';
   document.getElementById('pipelineSection').style.display = 'none';
+  document.getElementById('gallerySection').style.display = '';
+  document.getElementById('scrollDownPrompt').style.display = 'none';
   document.getElementById('ideaInput').value = '';
   state.currentBlueprint = {};
   state.currentBlueprintId = null;
@@ -1068,9 +1075,13 @@ function resetBuilder() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function goHome() {
+  resetBuilder();
+}
+
 // ── SKELETON & INCREMENTAL RENDERING HELPERS ───────────────
 function hideAllSkeletons() {
-  const stages = ['ideaAnalysis','requirements','features','database','api','architecture','roadmap'];
+  const stages = ['analysis','requirements','features','database','api','architecture','roadmap'];
   stages.forEach(s => {
     const skeleton = document.getElementById(`skeleton-${s}`);
     if (skeleton) skeleton.style.display = 'none';
@@ -1094,13 +1105,14 @@ function hideAllSkeletons() {
 }
 
 function renderIndividualStage(stage, data) {
-  const skeleton = document.getElementById(`skeleton-${stage}`);
+  const domStage = stage === 'ideaAnalysis' ? 'analysis' : stage;
+  const skeleton = document.getElementById(`skeleton-${domStage}`);
   if (skeleton) skeleton.style.display = 'none';
 
-  const content = document.getElementById(`${stage}-content`);
+  const content = document.getElementById(`${domStage}-content`);
   if (content) content.style.display = 'block';
 
-  const wrapper = document.getElementById(`${stage}-content-wrapper`);
+  const wrapper = document.getElementById(`${domStage}-content-wrapper`);
   if (wrapper) wrapper.style.display = 'block';
 
   if (stage === 'ideaAnalysis') {
@@ -1158,11 +1170,6 @@ async function sendChatMessage() {
   const message = inputEl.value.trim();
   if (!message) return;
 
-  if (!state.currentBlueprintId) {
-    showToast('Generate a blueprint first to chat with the AI Architect.', 'error');
-    return;
-  }
-
   inputEl.value = '';
   appendChatBubble('user', message);
 
@@ -1176,7 +1183,10 @@ async function sendChatMessage() {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
   try {
-    const res = await fetch(`/api/blueprints/${state.currentBlueprintId}/chat`, {
+    const endpoint = state.currentBlueprintId
+      ? `/api/blueprints/${state.currentBlueprintId}/chat`
+      : `/api/blueprints/general/chat`;
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message })
@@ -1897,3 +1907,129 @@ async function renderDevPanel(blueprint) {
 }
 
 
+// ── FLOATING CHAT LOGIC ─────────────────────────────────────
+let floatingChatOpen = false;
+
+function toggleFloatingChat() {
+  const panel = document.getElementById('floatingChatPanel');
+  const fab = document.getElementById('chatFab');
+  floatingChatOpen = !floatingChatOpen;
+  if (floatingChatOpen) {
+    panel.classList.add('visible');
+    fab.classList.add('is-open');
+    dismissChatGreeting();
+  } else {
+    panel.classList.remove('visible');
+    fab.classList.remove('is-open');
+  }
+}
+
+function dismissChatGreeting(e) {
+  if (e) e.stopPropagation();
+  const bubble = document.getElementById('chatGreetingBubble');
+  if (!bubble) return;
+  bubble.classList.add('dismissing');
+  setTimeout(() => { bubble.style.display = 'none'; }, 260);
+}
+
+setTimeout(dismissChatGreeting, 10000);
+
+async function sendFloatingChatMessage() {
+  const inputEl = document.getElementById('floatingChatInput');
+  const message = inputEl.value.trim();
+  if (!message) return;
+  inputEl.value = '';
+  appendFloatingChatBubble('user', message);
+  const messagesContainer = document.getElementById('floatingChatMessages');
+  const typingBubble = document.createElement('div');
+  typingBubble.className = 'chat-bubble typing';
+  typingBubble.id = 'floatingChatTypingIndicator';
+  typingBubble.textContent = 'AI is writing...';
+  messagesContainer.appendChild(typingBubble);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  try {
+    const endpoint = state.currentBlueprintId
+      ? `/api/blueprints/${state.currentBlueprintId}/chat`
+      : `/api/blueprints/general/chat`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const indicator = document.getElementById('floatingChatTypingIndicator');
+    if (indicator) indicator.remove();
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Chat failed'); }
+    const data = await res.json();
+    appendFloatingChatBubble('system', data.response);
+  } catch (err) {
+    const indicator = document.getElementById('floatingChatTypingIndicator');
+    if (indicator) indicator.remove();
+    appendFloatingChatBubble('system', `Error: ${err.message}`);
+  }
+}
+
+function appendFloatingChatBubble(sender, text) {
+  const messagesContainer = document.getElementById('floatingChatMessages');
+  if (!messagesContainer) return;
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${sender}`;
+  let formatted = escHtml(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code style="font-family:var(--font-mono);color:var(--text-code)">$1</code>')
+    .replace(/\n/g, '<br>');
+  bubble.innerHTML = formatted;
+  messagesContainer.appendChild(bubble);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function setFloatingChatInput(text) {
+  const inputEl = document.getElementById('floatingChatInput');
+  inputEl.value = text;
+  inputEl.focus();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'floatingChatInput') {
+    e.preventDefault();
+    sendFloatingChatMessage();
+  }
+});
+
+// ── GALLERY (INSTANT PROTOTYPES) ─────────────────────────────
+const INSTANT_PROTOTYPES = [
+  { id:'proto-1', icon:'🤖', title:'AI SaaS Platform',    desc:'Multi-tenant AI tool with usage billing, model routing, and team workspaces.',   tags:['Next.js','OpenAI','Stripe','PostgreSQL'], color:'#2dd4bf' },
+  { id:'proto-2', icon:'🛒', title:'E-Commerce Engine',   desc:'Headless commerce with real-time inventory, payment processing, and analytics.',  tags:['React','Node.js','MongoDB','Stripe'],      color:'#c084fc' },
+  { id:'proto-3', icon:'📊', title:'Analytics Dashboard', desc:'Real-time data visualization platform with custom reports and team sharing.',      tags:['Vue.js','Python','ClickHouse','Redis'],    color:'#fbbf24' },
+  { id:'proto-4', icon:'💬', title:'Collaboration Hub',   desc:'Real-time team workspace with channels, video calls, and document co-editing.',    tags:['React','WebSocket','WebRTC','PostgreSQL'], color:'#34d399' }
+];
+
+async function loadGallery() {
+  const grid = document.getElementById('featuredGalleryGrid');
+  if (!grid) return;
+  grid.innerHTML = INSTANT_PROTOTYPES.map(proto => `
+    <div class="gallery-card-wrap" onclick="loadProtoBlueprint('${proto.id}')">
+      <div class="proto-card-accent" style="background:${proto.color}14; border-color:${proto.color}44;">
+        <div class="proto-card-header">
+          <div class="proto-card-icon" style="background:${proto.color}18; border-color:${proto.color}33;">${proto.icon}</div>
+          <div>
+            <div class="proto-card-title">${proto.title}</div>
+            <div class="proto-card-instant"><span class="instant-dot" style="background:${proto.color}"></span>Instant Load</div>
+          </div>
+        </div>
+        <div class="proto-card-desc">${proto.desc}</div>
+        <div class="proto-card-tags">${proto.tags.map(t => `<span class="proto-tag" style="border-color:${proto.color}44;color:${proto.color}">${t}</span>`).join('')}</div>
+        <button class="proto-card-btn" style="border-color:${proto.color}55;color:${proto.color};"><span>⚡</span> Load Blueprint</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadProtoBlueprint(protoId) {
+  const proto = INSTANT_PROTOTYPES.find(p => p.id === protoId);
+  if (!proto) return;
+  const ideaInput = document.getElementById('ideaInput');
+  if (ideaInput) ideaInput.value = proto.title + ': ' + proto.desc + ' Stack: ' + proto.tags.join(', ');
+  showToast(`"${proto.title}" loaded into input — click Generate Blueprint!`, 'info');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
