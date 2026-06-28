@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 
 const MODEL = 'gemini-2.5-flash';
 const CHAT_MODEL = 'gemini-2.5-flash';
+const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 
 // Gemini 2.5 Flash pricing (per 1M tokens)
 const PRICE_INPUT  = 0.075;
