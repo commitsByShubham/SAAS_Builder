@@ -126,3 +126,4 @@ async function callAIText(prompt, systemInstruction = '') {
 }
 
 module.exports = { callAI, callAIText, MODEL, PROMPT_VERSION };
+
