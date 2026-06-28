@@ -1,20 +1,39 @@
-const logger = require('./logger');
+const fs = require('fs').promises;
+const path = require('path');
 
-// Global in-memory data store that persists across serverless executions on the same container instance
-if (!global.__blueprintsDataStore) {
-  global.__blueprintsDataStore = {
-    blueprints: {}, // Stores full blueprint data by ID
-    index: []       // Stores the array of blueprint summaries (max 50)
-  };
+const isVercel = process.env.VERCEL === '1';
+const BLUEPRINTS_DIR = isVercel
+  ? path.join('/tmp', 'exports')
+  : path.join(__dirname, '../exports');
+
+const INDEX_FILE = path.join(BLUEPRINTS_DIR, 'index.json');
+
+async function ensureDir() {
+  await fs.mkdir(BLUEPRINTS_DIR, { recursive: true });
+}
+
+async function getIndex() {
+  try {
+    const data = await fs.readFile(INDEX_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return { blueprints: [] };
+  }
+}
+
+async function saveIndex(index) {
+  await fs.writeFile(INDEX_FILE, JSON.stringify(index, null, 2));
 }
 
 async function saveBlueprint(blueprint) {
-  const store = global.__blueprintsDataStore;
+  await ensureDir();
 
-  // 1. Save full data to memory map
-  store.blueprints[blueprint.id] = blueprint;
+  const filePath = path.join(BLUEPRINTS_DIR, `blueprint_${blueprint.id}.json`);
+  await fs.writeFile(filePath, JSON.stringify(blueprint, null, 2));
 
-  // 2. Build summary item
+  const index = await getIndex();
+  const existing = index.blueprints.findIndex(b => b.id === blueprint.id);
+
   const summary = {
     id: blueprint.id,
     idea: blueprint.idea,
@@ -23,38 +42,37 @@ async function saveBlueprint(blueprint) {
     totalDuration: blueprint.totalDuration
   };
 
-  // 3. Update the tracking list
-  const existing = store.index.findIndex(b => b.id === blueprint.id);
   if (existing >= 0) {
-    store.index[existing] = summary;
+    index.blueprints[existing] = summary;
   } else {
-    store.index.unshift(summary);
+    index.blueprints.unshift(summary);
   }
 
-  // 4. Cap index size to last 50 entries
-  store.index = store.index.slice(0, 50);
-  
-  return `memory://blueprint_${blueprint.id}.json`;
+  // Keep only last 50
+  index.blueprints = index.blueprints.slice(0, 50);
+  await saveIndex(index);
+
+  return filePath;
 }
 
 async function loadBlueprint(id) {
-  const store = global.__blueprintsDataStore;
-  const blueprint = store.blueprints[id];
-  
-  if (!blueprint) {
-    throw new Error(`Blueprint with ID ${id} not found in temporary memory store.`);
-  }
-  return blueprint;
+  const filePath = path.join(BLUEPRINTS_DIR, `blueprint_${id}.json`);
+  const data = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(data);
 }
 
 async function listBlueprints() {
-  return global.__blueprintsDataStore.index;
+  const index = await getIndex();
+  return index.blueprints;
 }
 
 async function deleteBlueprint(id) {
-  const store = global.__blueprintsDataStore;
-  delete store.blueprints[id];
-  store.index = store.index.filter(b => b.id !== id);
+  const filePath = path.join(BLUEPRINTS_DIR, `blueprint_${id}.json`);
+  await fs.unlink(filePath).catch(() => {});
+
+  const index = await getIndex();
+  index.blueprints = index.blueprints.filter(b => b.id !== id);
+  await saveIndex(index);
 }
 
 module.exports = { saveBlueprint, loadBlueprint, listBlueprints, deleteBlueprint };
