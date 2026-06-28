@@ -3,6 +3,43 @@
    Handles: API calls, SSE streaming, rendering, state, storage
    ============================================================ */
 
+// ── API KEY MANAGEMENT ─────────────────────────────────────
+function getApiKey() {
+  return localStorage.getItem('gemini_api_key');
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('AIza') || key.length < 20) {
+    document.getElementById('apiKeyError').style.display = 'block';
+    return;
+  }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('apiKeyModal').style.display = 'none';
+  document.getElementById('apiKeyError').style.display = 'none';
+  showToast('API key saved! Ready to generate blueprints.', 'success');
+  checkHealth();
+}
+
+function getHeaders() {
+  const key = getApiKey();
+  const headers = { 'Content-Type': 'application/json' };
+  if (key) headers['x-gemini-key'] = key;
+  return headers;
+}
+
+function showApiKeyModal() {
+  document.getElementById('apiKeyModal').style.display = 'flex';
+}
+
+function checkApiKey() {
+  if (!getApiKey()) {
+    document.getElementById('apiKeyModal').style.display = 'flex';
+    return false;
+  }
+  return true;
+}
+
 // ── STATE ──────────────────────────────────────────────────
 const state = {
   currentBlueprint: null,
@@ -15,6 +52,7 @@ const state = {
 
 // ── INIT ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  checkApiKey();
   checkHealth();
   loadHistory();
   loadGallery();
@@ -78,6 +116,7 @@ function setExample(text) {
 
 // ── BLUEPRINT GENERATION ───────────────────────────────────
 async function generateBlueprint() {
+  if (!checkApiKey()) return;
   const idea = document.getElementById('ideaInput').value.trim();
   if (!idea) { showToast('Please enter your software idea.', 'error'); return; }
   if (idea.length < 10) { showToast('Please describe your idea in more detail.', 'error'); return; }
@@ -135,7 +174,7 @@ async function generateBlueprint() {
 async function streamBlueprint(idea) {
   const response = await fetch('/api/blueprints/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ idea })
   });
 
@@ -1188,7 +1227,7 @@ async function sendChatMessage() {
       : `/api/blueprints/general/chat`;
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ message })
     });
     
@@ -1953,7 +1992,7 @@ async function sendFloatingChatMessage() {
       : `/api/blueprints/general/chat`;
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ message })
     });
     const indicator = document.getElementById('floatingChatTypingIndicator');

@@ -4,11 +4,8 @@ FROM node:18-alpine
 # Set the active working directory inside the container
 WORKDIR /app
 
-# Copy dependency manifests from the backend directory
-COPY backend/package*.json ./backend/
-
-# Install only production backend dependencies
-RUN cd backend && npm install --production
+COPY package*.json ./
+RUN npm install --production
 
 # Copy the rest of your application code into the container
 COPY . .
