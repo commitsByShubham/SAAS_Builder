@@ -9,9 +9,6 @@ const { callAIText } = require('../services/geminiService');
 const storage  = require('../utils/storage');
 const logger   = require('../utils/logger');
 
-// Extends execution timeout limit for Vercel Serverless operations
-export const maxDuration = 60;
-
 // ── Generate blueprint (SSE streaming) ────────────────────────────────────────
 router.post('/generate', async (req, res) => {
   const { idea } = req.body;
@@ -197,7 +194,6 @@ router.post('/:id/chat', chatRateLimiter, async (req, res) => {
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
     
-    // Create a compact context of the blueprint to feed Gemini
     const blueprintContext = {
       idea: blueprint.idea,
       executiveSummary: blueprint.stages?.ideaAnalysis?.data?.executiveSummary,
@@ -237,4 +233,10 @@ router.get('/logs/all', async (req, res) => {
   res.json(logger.getLogs());
 });
 
+// Export the router using CommonJS
 module.exports = router;
+
+// Vercel serverless function configuration for CommonJS files
+module.exports.config = {
+  maxDuration: 60
+};
