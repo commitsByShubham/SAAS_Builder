@@ -11,14 +11,16 @@ const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 const PRICE_INPUT  = 0.075;   // $0.075 / 1M input
 const PRICE_OUTPUT = 0.300;   // $0.300 / 1M output
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+function getAI() {
+  return new GoogleGenAI({ apiKey: process.env.ACTIVE_GEMINI_KEY || process.env.GEMINI_API_KEY });
+}
 
 // ── Raw call ─────────────────────────────────────────────────────────────────
 async function callGeminiRaw(prompt, stageName) {
   const startTime = Date.now();
   logger.log(`[GeminiService] → ${stageName} (model: ${MODEL})`);
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: MODEL,
     config: {
       responseMimeType: 'application/json',
@@ -50,7 +52,7 @@ async function callGeminiRaw(prompt, stageName) {
 // ── Public API ────────────────────────────────────────────────────────────────
 async function callAI(prompt, stageName, schema = null) {
   try {
-    const { result: rawResult, retryCount } = await executeWithRetry(callGeminiRaw, [prompt, stageName]);
+    const { result: rawResult, retryCount } = await executeWithRetry(callGeminiRaw, [prompt, stageName], 3, 2000);
     const { rawText, meta } = rawResult;
 
     const parsed = parseJSON(rawText, stageName);
@@ -64,7 +66,7 @@ async function callAI(prompt, stageName, schema = null) {
 }
 
 async function callAITextRaw(prompt, systemInstruction) {
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: CHAT_MODEL,
     config: {
       systemInstruction: systemInstruction || 'You are an AI Software Architect.',
@@ -86,7 +88,7 @@ async function callAIText(prompt, systemInstruction = '') {
         msg = parsed.error.message;
       }
     } catch (_) {}
-    
+
     logger.log(`[GeminiService] Text call failed: ${msg}`, 'error');
     throw new Error(msg);
   }

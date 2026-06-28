@@ -9,6 +9,17 @@ const { callAIText } = require('../services/geminiService');
 const storage  = require('../utils/storage');
 const logger   = require('../utils/logger');
 
+// ── Extract user API key from request ────────────────────────────────────────
+router.use((req, res, next) => {
+  const userKey = req.headers['x-gemini-key'];
+  if (userKey && userKey.startsWith('AIza')) {
+    process.env.ACTIVE_GEMINI_KEY = userKey;
+  } else {
+    process.env.ACTIVE_GEMINI_KEY = process.env.GEMINI_API_KEY;
+  }
+  next();
+});
+
 // ── Generate blueprint (SSE streaming) ────────────────────────────────────────
 router.post('/generate', async (req, res) => {
   const { idea } = req.body;
@@ -150,8 +161,17 @@ router.get('/:id/diagrams', async (req, res) => {
 });
 
 // ── Rate Limiter for Chat (3 per day per IP) ──────────────────────────────────
+// After the Map declaration:
 const chatLimits = new Map();
 
+// Add this cleanup — runs every hour:
+setInterval(() => {
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  for (const [ip, record] of chatLimits.entries()) {
+    if (now - record.firstRequest > ONE_DAY) chatLimits.delete(ip);
+  }
+}, 60 * 60 * 1000);
 function chatRateLimiter(req, res, next) {
   const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
   const now = Date.now();
