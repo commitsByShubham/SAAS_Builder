@@ -9,6 +9,9 @@ const { callAIText } = require('../services/geminiService');
 const storage  = require('../utils/storage');
 const logger   = require('../utils/logger');
 
+// Extends execution timeout limit for Vercel Serverless operations
+export const maxDuration = 60;
+
 // ── Generate blueprint (SSE streaming) ────────────────────────────────────────
 router.post('/generate', async (req, res) => {
   const { idea } = req.body;
@@ -84,8 +87,6 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// ── Export: JSON / Markdown / PDF / DOCX ─────────────────────────────────────
-// GET /api/blueprints/:id/export?format=pdf|docx|markdown|json
 router.get('/:id/export', async (req, res) => {
   const format = (req.query.format || 'json').toLowerCase();
   try {
@@ -96,10 +97,8 @@ router.get('/:id/export', async (req, res) => {
     res.setHeader('Content-Type', exported.mimeType);
 
     if (exported.content) {
-      // JSON / Markdown — send string
       res.send(exported.content);
     } else if (exported.filepath && fs.existsSync(exported.filepath)) {
-      // PDF / DOCX — pipe file
       fs.createReadStream(exported.filepath).pipe(res);
     } else {
       res.status(500).json({ error: 'Export file not generated.' });
@@ -110,8 +109,6 @@ router.get('/:id/export', async (req, res) => {
   }
 });
 
-// ── Developer Panel data ───────────────────────────────────────────────────────
-// GET /api/blueprints/:id/devpanel
 router.get('/:id/devpanel', async (req, res) => {
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
@@ -137,8 +134,6 @@ router.get('/:id/devpanel', async (req, res) => {
   }
 });
 
-// ── Diagrams: all 6 Mermaid strings ───────────────────────────────────────────
-// GET /api/blueprints/:id/diagrams
 router.get('/:id/diagrams', async (req, res) => {
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
@@ -149,35 +144,29 @@ router.get('/:id/diagrams', async (req, res) => {
   }
 });
 
-// ── Rate Limiter for Chat (3 per day per IP) ──────────────────────────────────
+// ── Rate Limiter Middleware ────────────────────────────────────────────────────
 const chatLimits = new Map();
-
 function chatRateLimiter(req, res, next) {
   const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
   const now = Date.now();
   const ONE_DAY = 24 * 60 * 60 * 1000;
-
   let record = chatLimits.get(ip);
   if (!record) {
     record = { count: 0, firstRequest: now };
     chatLimits.set(ip, record);
   }
-
-  // Reset limit after 24 hours
   if (now - record.firstRequest > ONE_DAY) {
     record.count = 0;
     record.firstRequest = now;
   }
-
   if (record.count >= 3) {
     return res.status(429).json({ error: 'You have reached your limit of 3 AI chats per day. Please try again tomorrow!' });
   }
-
   record.count += 1;
   next();
 }
 
-// ── General Chat (No Blueprint Context) ───────────────────────────────────────────
+// ── General Chat Endpoint ──────────────────────────────────────────────────────
 router.post('/general/chat', chatRateLimiter, async (req, res) => {
   const { message } = req.body;
   if (!message || message.trim() === '') {
