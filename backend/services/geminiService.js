@@ -8,14 +8,27 @@ const CHAT_MODEL = 'gemini-2.0-flash';
 const PROMPT_VERSION = process.env.PROMPT_VERSION || 'v1';
 
 // Gemini 2.5 Flash pricing (per 1M tokens)
-const PRICE_INPUT  = 0.075;   // $0.075 / 1M input
-const PRICE_OUTPUT = 0.300;   // $0.300 / 1M output
+const PRICE_INPUT  = 0.075;
+const PRICE_OUTPUT = 0.300;
+
+// ── Key Rotation ──────────────────────────────────────────────────────────────
+let currentKeyIndex = 0;
 
 function getAI() {
-  return new GoogleGenAI({ apiKey: process.env.ACTIVE_GEMINI_KEY || process.env.GEMINI_API_KEY });
+  const keys = [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY
+  ].filter(Boolean);
+
+  if (keys.length === 0) throw new Error('No Gemini API key configured.');
+
+  const key = keys[currentKeyIndex % keys.length];
+  currentKeyIndex++;
+  return new GoogleGenAI({ apiKey: key });
 }
 
-// ── Raw call ─────────────────────────────────────────────────────────────────
+// ── Raw call ──────────────────────────────────────────────────────────────────
 async function callGeminiRaw(prompt, stageName) {
   const startTime = Date.now();
   logger.log(`[GeminiService] → ${stageName} (model: ${MODEL})`);

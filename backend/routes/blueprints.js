@@ -9,19 +9,86 @@ const { callAIText } = require('../services/geminiService');
 const storage  = require('../utils/storage');
 const logger   = require('../utils/logger');
 
-// ── Extract user API key from request ────────────────────────────────────────
-router.use((req, res, next) => {
-  const userKey = req.headers['x-gemini-key'];
-  if (userKey && userKey.startsWith('AIza')) {
-    process.env.ACTIVE_GEMINI_KEY = userKey;
-  } else {
-    process.env.ACTIVE_GEMINI_KEY = process.env.GEMINI_API_KEY;
+// ── Blueprint Rate Limiter (2 per day per IP) ─────────────────────────────────
+const blueprintLimits = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  for (const [ip, record] of blueprintLimits.entries()) {
+    if (now - record.firstRequest > ONE_DAY) blueprintLimits.delete(ip);
   }
+}, 60 * 60 * 1000);
+
+function blueprintRateLimiter(req, res, next) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  let record = blueprintLimits.get(ip);
+  if (!record) {
+    record = { count: 0, firstRequest: now };
+    blueprintLimits.set(ip, record);
+  }
+
+  if (now - record.firstRequest > ONE_DAY) {
+    record.count = 0;
+    record.firstRequest = now;
+  }
+
+  if (record.count >= 2) {
+    const hoursLeft = Math.ceil((record.firstRequest + ONE_DAY - now) / 3600000);
+    return res.status(429).json({
+      error: `🌙 You've used your 2 free blueprints for today. Come back in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}!`,
+      hoursLeft
+    });
+  }
+
+  record.count++;
   next();
-});
+}
+
+// ── Chat Rate Limiter (2 per day per IP) ──────────────────────────────────────
+const chatLimits = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  for (const [ip, record] of chatLimits.entries()) {
+    if (now - record.firstRequest > ONE_DAY) chatLimits.delete(ip);
+  }
+}, 60 * 60 * 1000);
+
+function chatRateLimiter(req, res, next) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  let record = chatLimits.get(ip);
+  if (!record) {
+    record = { count: 0, firstRequest: now };
+    chatLimits.set(ip, record);
+  }
+
+  if (now - record.firstRequest > ONE_DAY) {
+    record.count = 0;
+    record.firstRequest = now;
+  }
+
+  if (record.count >= 2) {
+    const hoursLeft = Math.ceil((record.firstRequest + ONE_DAY - now) / 3600000);
+    return res.status(429).json({
+      error: `🌙 You've used your 2 free chats for today. Come back in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}!`,
+      hoursLeft
+    });
+  }
+
+  record.count++;
+  next();
+}
 
 // ── Generate blueprint (SSE streaming) ────────────────────────────────────────
-router.post('/generate', async (req, res) => {
+router.post('/generate', blueprintRateLimiter, async (req, res) => {
   const { idea } = req.body;
 
   if (!idea || idea.trim().length < 10) {
@@ -95,8 +162,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// ── Export: JSON / Markdown / PDF / DOCX ─────────────────────────────────────
-// GET /api/blueprints/:id/export?format=pdf|docx|markdown|json
+// ── Export: JSON / Markdown / PDF / DOCX ──────────────────────────────────────
 router.get('/:id/export', async (req, res) => {
   const format = (req.query.format || 'json').toLowerCase();
   try {
@@ -107,10 +173,8 @@ router.get('/:id/export', async (req, res) => {
     res.setHeader('Content-Type', exported.mimeType);
 
     if (exported.content) {
-      // JSON / Markdown — send string
       res.send(exported.content);
     } else if (exported.filepath && fs.existsSync(exported.filepath)) {
-      // PDF / DOCX — pipe file
       fs.createReadStream(exported.filepath).pipe(res);
     } else {
       res.status(500).json({ error: 'Export file not generated.' });
@@ -122,7 +186,6 @@ router.get('/:id/export', async (req, res) => {
 });
 
 // ── Developer Panel data ───────────────────────────────────────────────────────
-// GET /api/blueprints/:id/devpanel
 router.get('/:id/devpanel', async (req, res) => {
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
@@ -148,8 +211,7 @@ router.get('/:id/devpanel', async (req, res) => {
   }
 });
 
-// ── Diagrams: all 6 Mermaid strings ───────────────────────────────────────────
-// GET /api/blueprints/:id/diagrams
+// ── Diagrams ───────────────────────────────────────────────────────────────────
 router.get('/:id/diagrams', async (req, res) => {
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
@@ -160,44 +222,7 @@ router.get('/:id/diagrams', async (req, res) => {
   }
 });
 
-// ── Rate Limiter for Chat (3 per day per IP) ──────────────────────────────────
-// After the Map declaration:
-const chatLimits = new Map();
-
-// Add this cleanup — runs every hour:
-setInterval(() => {
-  const now = Date.now();
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  for (const [ip, record] of chatLimits.entries()) {
-    if (now - record.firstRequest > ONE_DAY) chatLimits.delete(ip);
-  }
-}, 60 * 60 * 1000);
-function chatRateLimiter(req, res, next) {
-  const ip = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
-  const now = Date.now();
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-
-  let record = chatLimits.get(ip);
-  if (!record) {
-    record = { count: 0, firstRequest: now };
-    chatLimits.set(ip, record);
-  }
-
-  // Reset limit after 24 hours
-  if (now - record.firstRequest > ONE_DAY) {
-    record.count = 0;
-    record.firstRequest = now;
-  }
-
-  if (record.count >= 3) {
-    return res.status(429).json({ error: 'You have reached your limit of 3 AI chats per day. Please try again tomorrow!' });
-  }
-
-  record.count += 1;
-  next();
-}
-
-// ── General Chat (No Blueprint Context) ───────────────────────────────────────────
+// ── General Chat ───────────────────────────────────────────────────────────────
 router.post('/general/chat', chatRateLimiter, async (req, res) => {
   const { message } = req.body;
   if (!message || message.trim() === '') {
@@ -205,10 +230,10 @@ router.post('/general/chat', chatRateLimiter, async (req, res) => {
   }
 
   try {
-    const systemInstruction = 
-      "You are ArchitectAI, an expert Principal Software Architect assistant. " +
-      "The user is asking questions about software architecture, technology selection, software design patterns, SAAS development, database schemas, or development roadmap planning. " +
-      "Provide constructive, precise architectural advice, answer questions, and guide them in planning their ideas.";
+    const systemInstruction =
+      'You are ArchitectAI, an expert Principal Software Architect assistant. ' +
+      'The user is asking questions about software architecture, technology selection, software design patterns, SAAS development, database schemas, or development roadmap planning. ' +
+      'Provide constructive, precise architectural advice, answer questions, and guide them in planning their ideas.';
 
     const responseText = await callAIText(message, systemInstruction);
     res.json({ response: responseText });
@@ -227,8 +252,7 @@ router.post('/:id/chat', chatRateLimiter, async (req, res) => {
 
   try {
     const blueprint = await storage.loadBlueprint(req.params.id);
-    
-    // Create a compact context of the blueprint to feed Gemini
+
     const blueprintContext = {
       idea: blueprint.idea,
       executiveSummary: blueprint.stages?.ideaAnalysis?.data?.executiveSummary,
@@ -247,13 +271,13 @@ router.post('/:id/chat', chatRateLimiter, async (req, res) => {
       qualityScore: blueprint.stages?.roadmap?.data?.qualityReview?.overallScore || blueprint.stages?.roadmap?.data?.overallScore
     };
 
-    const systemInstruction = 
-      "You are ArchitectAI, an expert Principal Software Architect assistant. " +
-      "The user is asking questions about their generated software blueprint. " +
-      "Below is a summarized version of the generated blueprint details:\n" +
-      JSON.stringify(blueprintContext, null, 2) + "\n\n" +
-      "Provide constructive, precise architectural advice, answer questions, and if they ask to add features or modify schemas, " +
-      "suggest exactly how they should modify the blueprint (e.g. new field, new endpoint, new component) in a technical manner.";
+    const systemInstruction =
+      'You are ArchitectAI, an expert Principal Software Architect assistant. ' +
+      'The user is asking questions about their generated software blueprint. ' +
+      'Below is a summarized version of the generated blueprint details:\n' +
+      JSON.stringify(blueprintContext, null, 2) + '\n\n' +
+      'Provide constructive, precise architectural advice, answer questions, and if they ask to add features or modify schemas, ' +
+      'suggest exactly how they should modify the blueprint (e.g. new field, new endpoint, new component) in a technical manner.';
 
     const responseText = await callAIText(message, systemInstruction);
     res.json({ response: responseText });

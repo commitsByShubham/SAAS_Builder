@@ -620,45 +620,5 @@
 
   <script src="script.js"></script>
 
-  <!-- API Key Modal -->
-  <div id="apiKeyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:#1a1a2e; border:1px solid #6C63FF; border-radius:16px; padding:40px; max-width:500px; width:90%; box-shadow:0 0 60px rgba(108,99,255,0.3);">
-      <div style="text-align:center; margin-bottom:24px;">
-        <div style="font-size:40px; margin-bottom:8px;">🔑</div>
-        <h2 style="color:#6C63FF; margin:0 0 8px; font-size:22px;">Enter Your Gemini API Key</h2>
-        <p style="color:#9ca3af; margin:0; font-size:14px; line-height:1.6;">
-          Each user brings their own free key — your key is stored only in your browser and never on our servers.
-        </p>
-      </div>
-
-      <div style="background:#0f0f23; border:1px solid #374151; border-radius:10px; padding:16px; margin-bottom:20px; font-size:13px; color:#9ca3af; line-height:1.8;">
-        <strong style="color:#6C63FF;">Get a free key in 30 seconds:</strong><br>
-        1. Go to <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#6C63FF;">aistudio.google.com/apikey</a><br>
-        2. Click <strong style="color:white;">Create API Key</strong><br>
-        3. Copy and paste it below
-      </div>
-
-      <input
-        id="apiKeyInput"
-        type="password"
-        placeholder="AIzaSy..."
-        style="width:100%; padding:14px; border-radius:8px; border:1px solid #374151; background:#0f0f23; color:white; font-size:15px; box-sizing:border-box; margin-bottom:8px; outline:none;"
-        onkeydown="if(event.key==='Enter') saveApiKey()"
-      />
-      <p id="apiKeyError" style="color:#ef4444; font-size:13px; margin:0 0 12px; display:none;">
-        ⚠ Please enter a valid Gemini API key (starts with AIza)
-      </p>
-
-      <button
-        onclick="saveApiKey()"
-        style="width:100%; padding:14px; background:linear-gradient(135deg,#6C63FF,#8b84ff); color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; font-weight:600; letter-spacing:0.3px;">
-        Save & Start Building 🚀
-      </button>
-
-      <p style="text-align:center; color:#6b7280; font-size:12px; margin:12px 0 0;">
-        🔒 Stored locally in your browser · Never sent to our servers · Free tier = 250K tokens/day
-      </p>
-    </div>
-  </div>
 </body>
 </html>

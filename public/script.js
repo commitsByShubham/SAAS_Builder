@@ -3,41 +3,28 @@
    Handles: API calls, SSE streaming, rendering, state, storage
    ============================================================ */
 
-// ── API KEY MANAGEMENT ─────────────────────────────────────
-function getApiKey() {
-  return localStorage.getItem('gemini_api_key');
-}
+// ── DAILY LIMIT MODAL ─────────────────────────────────────
+function showDailyLimitModal(message, hoursLeft) {
+  // Remove existing modal if any
+  const existing = document.getElementById('dailyLimitModal');
+  if (existing) existing.remove();
 
-function saveApiKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key.startsWith('AIza') || key.length < 20) {
-    document.getElementById('apiKeyError').style.display = 'block';
-    return;
-  }
-  localStorage.setItem('gemini_api_key', key);
-  document.getElementById('apiKeyModal').style.display = 'none';
-  document.getElementById('apiKeyError').style.display = 'none';
-  showToast('API key saved! Ready to generate blueprints.', 'success');
-  checkHealth();
-}
-
-function getHeaders() {
-  const key = getApiKey();
-  const headers = { 'Content-Type': 'application/json' };
-  if (key) headers['x-gemini-key'] = key;
-  return headers;
-}
-
-function showApiKeyModal() {
-  document.getElementById('apiKeyModal').style.display = 'flex';
-}
-
-function checkApiKey() {
-  if (!getApiKey()) {
-    document.getElementById('apiKeyModal').style.display = 'flex';
-    return false;
-  }
-  return true;
+  const modal = document.createElement('div');
+  modal.id = 'dailyLimitModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#1a1a2e;border:2px solid #6C63FF;border-radius:16px;padding:40px;text-align:center;max-width:420px;width:90%;box-shadow:0 0 60px rgba(108,99,255,0.4);">
+      <div style="font-size:56px;margin-bottom:12px">🌙</div>
+      <h2 style="color:#6C63FF;margin:0 0 12px;font-size:22px;">Daily Limit Reached</h2>
+      <p style="color:#9ca3af;margin:0 0 8px;line-height:1.6;">${message || "You've used your free quota for today."}</p>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">Limits reset every 24 hours. Come back tomorrow!</p>
+      <button onclick="document.getElementById('dailyLimitModal').remove()"
+        style="padding:12px 32px;background:linear-gradient(135deg,#6C63FF,#8b84ff);color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;">
+        Got it! 👍
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 // ── STATE ──────────────────────────────────────────────────
@@ -52,7 +39,6 @@ const state = {
 
 // ── INIT ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  checkApiKey();
   checkHealth();
   loadHistory();
   loadGallery();
@@ -116,7 +102,6 @@ function setExample(text) {
 
 // ── BLUEPRINT GENERATION ───────────────────────────────────
 async function generateBlueprint() {
-  if (!checkApiKey()) return;
   const idea = document.getElementById('ideaInput').value.trim();
   if (!idea) { showToast('Please enter your software idea.', 'error'); return; }
   if (idea.length < 10) { showToast('Please describe your idea in more detail.', 'error'); return; }
@@ -174,10 +159,15 @@ async function generateBlueprint() {
 async function streamBlueprint(idea) {
   const response = await fetch('/api/blueprints/generate', {
     method: 'POST',
-    headers: getHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idea })
   });
 
+  if (response.status === 429) {
+    const err = await response.json();
+    showDailyLimitModal(err.error, err.hoursLeft);
+    return;
+  }
   if (!response.ok) {
     const err = await response.json();
     throw new Error(err.error || 'Server error');
@@ -1227,7 +1217,7 @@ async function sendChatMessage() {
       : `/api/blueprints/general/chat`;
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message })
     });
     
@@ -1235,6 +1225,13 @@ async function sendChatMessage() {
     const indicator = document.getElementById('chatTypingIndicator');
     if (indicator) indicator.remove();
 
+    if (res.status === 429) {
+      const err = await res.json();
+      const indicator = document.getElementById('chatTypingIndicator');
+      if (indicator) indicator.remove();
+      showDailyLimitModal(err.error, err.hoursLeft);
+      return;
+    }
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Chat request failed');
@@ -1992,11 +1989,18 @@ async function sendFloatingChatMessage() {
       : `/api/blueprints/general/chat`;
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message })
     });
     const indicator = document.getElementById('floatingChatTypingIndicator');
     if (indicator) indicator.remove();
+    if (res.status === 429) {
+      const err = await res.json();
+      const indicator = document.getElementById('floatingChatTypingIndicator');
+      if (indicator) indicator.remove();
+      showDailyLimitModal(err.error, err.hoursLeft);
+      return;
+    }
     if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Chat failed'); }
     const data = await res.json();
     appendFloatingChatBubble('system', data.response);
