@@ -32,7 +32,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('*', (req, res) => {
+// ✅ FIXED: Changed '*' to '{*splat}' for Express v5 compatibility
+app.get('{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 

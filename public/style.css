@@ -1410,6 +1410,8 @@ tbody tr:hover td { background: var(--bg-hover); }
 
 .toast.toast-success { border-color: rgba(34,197,94,0.4); }
 .toast.toast-error   { border-color: rgba(239,68,68,0.4); }
+.toast.toast-info    { border-color: rgba(108,99,255,0.4); }
+.toast.toast-warn    { border-color: rgba(245,158,11,0.4); }
 
 /* ══════════════════════════════════════
    MISC
@@ -1830,8 +1832,25 @@ body::after {
   text-transform: uppercase;
 }
 .sidebar-stage.active .stage-status-text { color: var(--accent); }
+.sidebar-stage.processing .stage-status-text { color: var(--accent); }
 .sidebar-stage.complete .stage-status-text { color: var(--green); }
 .sidebar-stage.error .stage-status-text { color: var(--red); }
+
+/* processing mirrors active */
+.sidebar-stage.processing {
+  background: var(--accent-dim);
+  border-color: rgba(99,102,241,0.25);
+}
+.sidebar-stage.processing .stage-dot-indicator {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+.sidebar-stage.processing .stage-name-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 
 @keyframes pulseGlow {
   0%, 100% { opacity: 0.6; }

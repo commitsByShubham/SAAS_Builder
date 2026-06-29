@@ -1,6 +1,34 @@
 {
   "blueprints": [
     {
+      "id": "d56ef887-b7ad-46e0-b2b4-6970e73b9763",
+      "idea": "Collaboration Hub: Real-time team workspace with channels, video calls, and document co-editing. Stack: React, WebSocket, WebRTC, PostgreSQL",
+      "createdAt": "2026-06-29T17:32:35.586Z",
+      "status": "complete",
+      "totalDuration": 178933
+    },
+    {
+      "id": "f91e9117-d817-4ace-a45c-41317f9f2ef4",
+      "idea": "A dog walking app for pet owners in urban areas 1782752193704",
+      "createdAt": "2026-06-29T16:56:33.713Z",
+      "status": "complete",
+      "totalDuration": 120448
+    },
+    {
+      "id": "288918f6-5cfe-462a-9f96-ca2aed54b56f",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-29T16:56:16.602Z",
+      "status": "complete",
+      "totalDuration": 771
+    },
+    {
+      "id": "6ee0a257-75c1-4e68-89eb-3f935cddecf5",
+      "idea": "Build a micro-learning platform for software developers with AI bite-sized content generation",
+      "createdAt": "2026-06-29T16:56:15.787Z",
+      "status": "complete",
+      "totalDuration": 801
+    },
+    {
       "id": "b8365ba2-8dcd-4402-a674-25c2d1c31e71",
       "idea": "AI SaaS Platform: Multi-tenant AI tool with usage billing, model routing, and team workspaces. Stack: Next.js, OpenAI, Stripe, PostgreSQL",
       "createdAt": "2026-06-27T01:55:07.693Z",

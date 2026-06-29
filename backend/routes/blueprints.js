@@ -101,12 +101,27 @@ router.post('/generate', blueprintRateLimiter, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx/proxy buffering
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
   const sendEvent = (event, data) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    if (!res.writableEnded) {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
   };
+
+  // Send SSE keepalive heartbeat every 15s to prevent proxy/CDN timeout
+  const heartbeatInterval = setInterval(() => {
+    if (!res.writableEnded) {
+      res.write(': heartbeat\n\n');
+    } else {
+      clearInterval(heartbeatInterval);
+    }
+  }, 15000);
+
+  // Clean up heartbeat if client disconnects early
+  req.on('close', () => clearInterval(heartbeatInterval));
 
   try {
     sendEvent('start', { message: 'Blueprint generation started', idea });
@@ -123,10 +138,12 @@ router.post('/generate', blueprintRateLimiter, async (req, res) => {
       cached:        blueprint.isFromCache || false,
     });
 
+    clearInterval(heartbeatInterval);
     res.end();
   } catch (error) {
     logger.log(`Blueprint generation failed: ${error.message}`, 'error');
     sendEvent('error', { message: error.message });
+    clearInterval(heartbeatInterval);
     res.end();
   }
 });

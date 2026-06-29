@@ -110,6 +110,7 @@ async function generateBlueprint() {
   state.generating = true;
   state.currentBlueprint = {};
   state.currentBlueprintId = null;
+  state.pendingIdea = idea; // track for polling fallback
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
@@ -143,17 +144,62 @@ async function generateBlueprint() {
 
   addLog('info', `Starting blueprint generation for: "${idea.substring(0, 80)}..."`);
 
+  const generationStartTime = Date.now();
+
   try {
     await streamBlueprint(idea);
   } catch (err) {
-    showToast(`Generation failed: ${err.message}`, 'error');
-    addLog('error', `Generation failed: ${err.message}`);
+    // SSE stream failed — but the backend may still be running (e.g., Vercel timeout)
+    // Try polling fallback before showing error
+    addLog('warn', `Stream ended unexpectedly: ${err.message}. Checking if generation completed...`);
   } finally {
+    // If SSE stream ended WITHOUT receiving a complete event, try polling fallback
+    if (!state.currentBlueprintId) {
+      addLog('info', 'Switching to polling mode — waiting for backend to finish...');
+      btn.querySelector('.btn-text').textContent = 'Waiting...';
+      showToast('⏳ Checking if blueprint is ready...', 'info');
+      const found = await pollForBlueprint(idea, generationStartTime);
+      if (!found) {
+        showToast('Generation timed out or failed. Please try again.', 'error');
+        addLog('error', 'Polling timed out — no blueprint found.');
+      }
+    }
     state.generating = false;
     btn.disabled = false;
     btn.querySelector('.btn-text').textContent = 'Generate Blueprint';
     clearInterval(state.timerInterval);
   }
+}
+
+// ── POLLING FALLBACK ────────────────────────────────────────
+// Called when SSE stream drops without a 'complete' event.
+// Polls the blueprint list for up to 5 minutes to find the new blueprint.
+async function pollForBlueprint(idea, startedAt, maxWaitMs = 300000, intervalMs = 5000) {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, intervalMs));
+    try {
+      const r = await fetch('/api/blueprints');
+      if (!r.ok) continue;
+      const list = await r.json();
+      // Find a blueprint that matches our idea and was created after we started
+      const match = (Array.isArray(list) ? list : []).find(b => {
+        if (!b.idea || !b.createdAt) return false;
+        const created = new Date(b.createdAt).getTime();
+        return created >= startedAt && b.idea.trim() === idea.trim() && b.status === 'complete';
+      });
+      if (match) {
+        addLog('info', `Blueprint found via polling! ID: ${match.id}`);
+        state.currentBlueprintId = match.id;
+        loadAndRenderBlueprint(match.id);
+        return true;
+      }
+      addLog('info', `Polling... blueprint not ready yet (${Math.round((Date.now() - startedAt) / 1000)}s elapsed)`);
+    } catch (e) {
+      // ignore polling errors, keep trying
+    }
+  }
+  return false;
 }
 
 async function streamBlueprint(idea) {
@@ -176,29 +222,56 @@ async function streamBlueprint(idea) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let pendingEvent = null; // Persists across chunk reads (proper SSE spec handling)
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  // Stall detection: if no progress in 3 minutes, throw timeout error
+  let lastActivity = Date.now();
+  const stallCheckInterval = setInterval(() => {
+    if (Date.now() - lastActivity > 180000) {
+      clearInterval(stallCheckInterval);
+      reader.cancel();
+    }
+  }, 10000);
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep incomplete line
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    let currentEvent = null;
-    for (const line of lines) {
-      if (line.startsWith('event: ')) {
-        currentEvent = line.slice(7).trim();
-      } else if (line.startsWith('data: ') && currentEvent) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          handleSSEEvent(currentEvent, data);
-        } catch (e) {
-          // ignore parse errors
+      lastActivity = Date.now();
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse complete SSE message blocks (delimited by blank lines)
+      // A message block ends with '\n\n'. We split on double-newline to get complete messages.
+      const messages = buffer.split('\n\n');
+      buffer = messages.pop(); // Last element is the incomplete message; keep in buffer
+
+      for (const message of messages) {
+        if (!message.trim()) continue; // skip empty blocks
+        const lines = message.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith(': ')) {
+            // SSE comment (heartbeat) — ignore but update activity timestamp
+            lastActivity = Date.now();
+          } else if (line.startsWith('event: ')) {
+            pendingEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            if (pendingEvent) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                handleSSEEvent(pendingEvent, data);
+              } catch (e) {
+                // ignore JSON parse errors for malformed data lines
+              }
+              pendingEvent = null;
+            }
+          }
         }
-        currentEvent = null;
       }
     }
+  } finally {
+    clearInterval(stallCheckInterval);
   }
 }
 
